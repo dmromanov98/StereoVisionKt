@@ -5,30 +5,31 @@ import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
 import org.opencv.videoio.VideoCapture
 import ru.mirea.core.models.HSVParams
-import ru.mirea.gui.MainWindow
 import tornadofx.runLater
+import java.lang.IndexOutOfBoundsException
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 
 class FrameGrabber(
-    private val cameraId: Int,
-    private val width: Int,
-    private val height: Int,
-    private val initializer: MainWindow
+    val cameraId: Int,
+    val width: Int,
+    val height: Int,
+    private val initializer: CamerasProcessor
 ) : Runnable {
 
-    lateinit var capture: VideoCapture
-    var timer: ScheduledExecutorService? = null
-    var mainFrameImage = Mat()
-    var hsvMaskFrameImage = Mat()
-    var morphFrameImage = Mat()
-    var blur = false
-    var hsvParams = HSVParams()
-    private var staffUpdatePeriod = 33
+    private lateinit var capture: VideoCapture
+    private var timer: Timer? = null
+    private var mainFrameImage = Mat()
+    private var hsvMaskFrameImage = Mat()
+    private var morphFrameImage = Mat()
+    private var blur = false
+    private var hsvParams = HSVParams()
     var isThreadRun = false
     private var cameraActive = false
+
+    companion object {
+        var staffUpdatePeriod: Long = 33
+        var delay: Long = 0
+    }
 
     fun initAndRunOrStop() {
         if (!cameraActive) {
@@ -38,13 +39,7 @@ class FrameGrabber(
                 runLater { initializer.beforeRunning(cameraId) }
                 cameraActive = true
                 run()
-                timer = Executors.newSingleThreadScheduledExecutor()
-                timer!!.scheduleAtFixedRate(
-                    this,
-                    0,
-                    staffUpdatePeriod.toLong(),
-                    TimeUnit.MILLISECONDS
-                )
+                timer = Timer(this).withStaffUpdatePeriod(staffUpdatePeriod).withDelay(delay)
             }
         } else {
             cameraActive = false
@@ -54,13 +49,9 @@ class FrameGrabber(
 
     private fun stopAcquisition() {
         runLater { initializer.afterRunning(cameraId) }
-        if (timer != null && !timer!!.isShutdown) {
-            try {
-                timer!!.shutdown()
-                timer!!.awaitTermination(33, TimeUnit.MILLISECONDS)
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            }
+        if (timer != null) {
+            timer?.stop()
+            timer = null
         }
         if (capture.isOpened) {
             capture.release()
@@ -124,11 +115,11 @@ class FrameGrabber(
         val morph = Mat()
         val dilateElement = Imgproc.getStructuringElement(
             Imgproc.MORPH_RECT,
-            Size(24.0, 24.0)
+            Size(4.0, 4.0)
         )
         val erodeElement = Imgproc.getStructuringElement(
             Imgproc.MORPH_RECT,
-            Size(12.0, 12.0)
+            Size(2.0, 2.0)
         )
 
         //morphological operators
@@ -145,13 +136,25 @@ class FrameGrabber(
             mainFrameImage = getMainFrame()
             hsvMaskFrameImage = getFrameWithHSVRange(convertToHSV(mainFrameImage))
             morphFrameImage = getMorphFrame(hsvMaskFrameImage)
-            mainFrameImage = findAndDrawContours(morphFrameImage, mainFrameImage)
-            val centerOfObject = getObjectCenterPoint(hsvMaskFrameImage)
-            Imgproc.circle(
-                mainFrameImage, centerOfObject, 7,
-                Scalar(255.0, 255.0, 255.0), -1
-            )
+            val contours = findContours(morphFrameImage)
+            mainFrameImage = drawContours(morphFrameImage, mainFrameImage, contours)
+            val centers = arrayListOf<Point>()
+            contours.forEach {
+                val centerOfObject = getObjectCenterPoint(it)
+                centers.add(centerOfObject)
+                Imgproc.circle(
+                    mainFrameImage, centerOfObject, 5,
+                    Scalar(255.0, 255.0, 255.0), -1
+                )
+            }
+
             toInitializer()
+            runLater {
+                try {
+                    initializer.loadCenters(centers[0], centers[1], cameraId)
+                } catch (ex: IndexOutOfBoundsException) {
+                }
+            }
         } catch (ex: java.lang.Exception) {
             isThreadRun = false
         }
@@ -169,15 +172,21 @@ class FrameGrabber(
 
     private fun getObjectCenterPoint(image: Mat): Point {
         val moments = Imgproc.moments(image)
+
         return Point((moments.m10 / moments.m00), (moments.m01 / moments.m00))
     }
 
-    private fun findAndDrawContours(image: Mat, mainImage: Mat): Mat {
+    private fun findContours(image: Mat): List<MatOfPoint> {
         val contours: List<MatOfPoint> = ArrayList()
         val hierarchy = Mat()
-        // find contours
-        Imgproc.findContours(image, contours, hierarchy, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE)
+        Imgproc.findContours(image, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+        return contours
+    }
 
+    private fun drawContours(image: Mat, mainImage: Mat, contours: List<MatOfPoint>): Mat {
+        val hierarchy = Mat()
+        // find contours
+        Imgproc.findContours(image, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
         // if any contour exist...
         if (hierarchy.size().height > 0 && hierarchy.size().width > 0) {
             // for each contour, display it in blue
@@ -187,6 +196,7 @@ class FrameGrabber(
                 idx = hierarchy[0, idx][0].toInt()
             }
         }
+
         return mainImage
     }
 
