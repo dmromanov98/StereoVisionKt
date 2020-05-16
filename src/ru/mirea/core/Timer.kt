@@ -8,18 +8,8 @@ class Timer(initializer: Runnable) {
     private var timer: ScheduledExecutorService? = null
 
     companion object {
-        private var staffUpdatePeriod: Long = 33
-        private var delay: Long = 0
-    }
-
-    fun withStaffUpdatePeriod(staffUpdatePeriod: Long): Timer {
-        Timer.staffUpdatePeriod = staffUpdatePeriod
-        return this
-    }
-
-    fun withDelay(delay: Long): Timer {
-        Timer.delay = delay
-        return this
+        var staffUpdatePeriod: Long = 33
+        var delay: Long = 0
     }
 
     init {

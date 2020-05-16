@@ -12,6 +12,8 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         var firstCamera: FrameGrabber? = null
         var secondCamera: FrameGrabber? = null
         var objectPosition: ObjectPosition? = null
+        var widthOfVideo: Double = 1280.0
+        var heightOfVideo: Double = 720.0
     }
 
     private var firstCameraId: Int? = null
@@ -27,22 +29,50 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
 
     fun withStaffUpdatePeriod(staffUpdatePeriod: Long): CamerasProcessor {
         FrameGrabber.staffUpdatePeriod = staffUpdatePeriod
+        reloadTimerParameters()
         return this
+    }
+
+    private fun reloadTimerParameters() {
+        if (firstCamera != null && firstCamera!!.isThreadRun) {
+            firstCamera!!.reloadTimerParameters()
+        }
+        if (secondCamera != null && secondCamera!!.isThreadRun) {
+            secondCamera!!.reloadTimerParameters()
+        }
+        if (objectPosition != null) {
+            objectPosition!!.reloadTimerParameters()
+        }
     }
 
     fun withDelay(delay: Long): CamerasProcessor {
         FrameGrabber.delay = delay
+        reloadTimerParameters()
         return this
     }
 
-    fun startFirstCamera(cameraId: Int, fitWidthImage: Int, fitHeightImage: Int, hsvParams: HSVParams) {
+    fun withWidthAndHeightOfVideo(widthOfVideo: Double, heightOfVideo: Double): CamerasProcessor {
+        CamerasProcessor.widthOfVideo = widthOfVideo
+        CamerasProcessor.heightOfVideo = heightOfVideo
+        if (firstCamera != null && firstCamera!!.isThreadRun) {
+            firstCamera!!.width = widthOfVideo.toInt()
+            firstCamera!!.height = heightOfVideo.toInt()
+        }
+        if (secondCamera != null && secondCamera!!.isThreadRun) {
+            secondCamera!!.width = widthOfVideo.toInt()
+            secondCamera!!.height = heightOfVideo.toInt()
+        }
+        return this
+    }
+
+    fun startFirstCamera(cameraId: Int, hsvParams: HSVParams): CamerasProcessor {
         firstCameraId = cameraId
         if ((firstCamera == null || !firstCamera!!.isThreadRun) && cameraId != secondCamera?.cameraId
         ) {
             firstCamera = FrameGrabber(
                 cameraId,
-                fitWidthImage,
-                fitHeightImage,
+                widthOfVideo.toInt(),
+                heightOfVideo.toInt(),
                 this
             ).withBlur()
             firstCamera!!.initAndRunOrStop()
@@ -51,16 +81,17 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             firstCamera!!.initAndRunOrStop()
             firstCamera = null
         }
+        return this
     }
 
-    fun startSecondCamera(cameraId: Int, fitWidthImage: Int, fitHeightImage: Int, hsvParams: HSVParams) {
+    fun startSecondCamera(cameraId: Int, hsvParams: HSVParams): CamerasProcessor {
         secondCameraId = cameraId
         if ((secondCamera == null || !secondCamera!!.isThreadRun) && cameraId != firstCamera?.cameraId
         ) {
             secondCamera = FrameGrabber(
                 cameraId,
-                fitWidthImage,
-                fitHeightImage,
+                widthOfVideo.toInt(),
+                heightOfVideo.toInt(),
                 this
             ).withBlur()
             secondCamera!!.initAndRunOrStop()
@@ -69,6 +100,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             secondCamera!!.initAndRunOrStop()
             secondCamera = null
         }
+        return this
     }
 
     fun withFocus(focus: Double): CamerasProcessor {
@@ -90,7 +122,6 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         this.distanceBetweenCameras = distanceBetweenCameras
         return this
     }
-
 
     fun updateHSVParams(hsvParams: HSVParams) {
         if (firstCamera != null) {
@@ -130,17 +161,16 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             secondCameraSecondCenter = center2
         }
         processCenters()
+        distanceMeasurement()
+    }
+
+    private fun distanceMeasurement() {
         if (firstCamera != null && secondCamera != null
             && firstCamera!!.isThreadRun && secondCamera!!.isThreadRun
         ) {
             if (objectPosition == null) {
-                val firstGrabberCenter = getCenter(firstCamera!!)
-                val secondGrabberCenter = getCenter(secondCamera!!)
-                objectPosition = ObjectPosition(
-                    firstGrabberCenter,
-                    secondGrabberCenter
-                    , this
-                ).withDistanceBetweenCameras(distanceBetweenCameras)
+                objectPosition = ObjectPosition(this)
+                    .withDistanceBetweenCameras(distanceBetweenCameras)
                     .withFocus(focus)
                     .withFirstCameraDownPoint(firstCameraFirstCenter)
                     .withFirstCameraUpperPoint(firstCameraSecondCenter)
@@ -148,6 +178,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
                     .withSecondCameraUpperPoint(secondCameraSecondCenter)
                     .withMethod(method)
                     .withRatio(ratio)
+                    .withCenterOfVideos(getCenter())
                 objectPosition!!.initAndRun()
             } else {
                 objectPosition!!.withDistanceBetweenCameras(distanceBetweenCameras)
@@ -158,6 +189,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
                     .withSecondCameraUpperPoint(secondCameraSecondCenter)
                     .withMethod(method)
                     .withRatio(ratio)
+                    .withCenterOfVideos(getCenter())
             }
         } else if (objectPosition != null && objectPosition!!.calculating) {
             objectPosition!!.stopCalculating()
@@ -165,8 +197,8 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         }
     }
 
-    private fun getCenter(grabber: FrameGrabber) =
-        Point((grabber.width / 2).toDouble(), (grabber.height / 2).toDouble())
+    private fun getCenter() =
+        Point((widthOfVideo / 2), (heightOfVideo / 2))
 
     override fun processCenters() {
         if (firstCameraFirstCenter.y > firstCameraSecondCenter.y

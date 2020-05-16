@@ -1,5 +1,6 @@
 package ru.mirea.gui
 
+import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
 import javafx.geometry.Orientation
 import javafx.scene.control.Button
@@ -12,6 +13,7 @@ import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.StackPane
 import org.opencv.core.Point
 import ru.mirea.core.CamerasProcessor
+import ru.mirea.core.enums.QualityOfVideo
 import ru.mirea.core.interfaces.ObjectPositionLibraryInterface
 import ru.mirea.core.models.HSVParams
 import ru.mirea.core.models.ObjectPositionModel
@@ -19,32 +21,34 @@ import tornadofx.*
 
 class MainWindow : View("Detection Object Definition"),
     ObjectPositionLibraryInterface {
-    var hsvParams = HSVParams()
+    private var hsvParams = HSVParams()
     private val fitWidthImage = 620.0
     private val fitHeightImage = 620.0
+    private var widthOfVideo = 1280.0
+    private var heightOfVideo = 720.0
 
     private val fitWidthMaskAndMorphImage = 365.0
     private val fitHeightMaskAndMorphImage = 365.0
 
-    lateinit var leftImage: ImageView
-    lateinit var rightImage: ImageView
-    lateinit var leftMorphImage: ImageView
-    lateinit var rightMorphImage: ImageView
-    lateinit var leftMaskImage: ImageView
-    lateinit var rightMaskImage: ImageView
-    lateinit var leftCameraId: TextField
-    lateinit var rightCameraId: TextField
-    lateinit var leftCameraButton: Button
-    lateinit var rightCameraButton: Button
-    lateinit var hueStart: Slider
-    lateinit var hueStop: Slider
-    lateinit var saturationStart: Slider
-    lateinit var saturationStop: Slider
-    lateinit var valueStart: Slider
-    lateinit var valueStop: Slider
-    lateinit var distanceDownPointFirstTab: Label
-    lateinit var distanceUpperPointFirstTab: Label
-    lateinit var clickedFirstTab: Label
+    private lateinit var leftImage: ImageView
+    private lateinit var rightImage: ImageView
+    private lateinit var leftMorphImage: ImageView
+    private lateinit var rightMorphImage: ImageView
+    private lateinit var leftMaskImage: ImageView
+    private lateinit var rightMaskImage: ImageView
+    private lateinit var leftCameraId: TextField
+    private lateinit var rightCameraId: TextField
+    private lateinit var leftCameraButton: Button
+    private lateinit var rightCameraButton: Button
+    private lateinit var hueStart: Slider
+    private lateinit var hueStop: Slider
+    private lateinit var saturationStart: Slider
+    private lateinit var saturationStop: Slider
+    private lateinit var valueStart: Slider
+    private lateinit var valueStop: Slider
+    private lateinit var distanceDownPointFirstTab: Label
+    private lateinit var distanceUpperPointFirstTab: Label
+    private lateinit var clickedFirstTab: Label
     private var camerasProcessor = CamerasProcessor(this)
 
     override val root: StackPane = stackpane {
@@ -267,7 +271,7 @@ class MainWindow : View("Detection Object Definition"),
                     }
                     label("Правая камера: ") {
                         layoutX = 520.0
-                        layoutY = 380.0
+                        layoutY = 375.0
                     }
                     separator {
                         orientation = Orientation.HORIZONTAL
@@ -275,30 +279,172 @@ class MainWindow : View("Detection Object Definition"),
                         AnchorPane.setTopAnchor(this@separator, 450.0)
                         AnchorPane.setLeftAnchor(this@separator, 15.0)
                     }
+                    textfield {
+                        promptText = "Фокусное расстояние"
+                        filterInput { it.controlNewText.isDouble() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 480.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setFocus(newValue.toDouble())
+                            }
+                        }
+                    }
+                    textfield {
+                        promptText = "Время обновления кадра (мс)"
+                        filterInput { it.controlNewText.isLong() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 510.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setStaffUpdatePeriod(newValue.toLong())
+                            }
+                        }
+                    }
+                    textfield {
+                        promptText = "Время задержки (мс)"
+                        filterInput { it.controlNewText.isLong() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 540.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setDelay(newValue.toLong())
+                            }
+                        }
+                    }
+                    textfield {
+                        promptText = "Номер алгоритма (0-255)"
+                        filterInput { it.controlNewText.isInt() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 570.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setMethodNumber(newValue.toByte())
+                            }
+                        }
+                    }
+                    textfield {
+                        promptText = "Расстояние между камерами"
+                        filterInput { it.controlNewText.isDouble() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 600.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setDistanceBetweenCameras(newValue.toDouble())
+                            }
+                        }
+                    }
+                    textfield {
+                        promptText = "Зависимость расстояния от пикселей (для алгоритма 2)"
+                        filterInput { it.controlNewText.isDouble() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 630.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setRatio(newValue.toDouble())
+                            }
+                        }
+                    }
+                    combobox(
+                        SimpleStringProperty(QualityOfVideo.HIGHEST.name),
+                        QualityOfVideo.values().map { it.name }) {
+                        AnchorPane.setTopAnchor(this@combobox, 660.0)
+                        AnchorPane.setLeftAnchor(this@combobox, 15.0)
+                        valueProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            setQualityOfVideo(QualityOfVideo.valueOf(newValue))
+                        }
+                    }
                 }
+            }
+
+            tab("Тестирование") {
+                label {
+                    text =
+                        "В данном разделе вы можете протестировать используемое вами оборудование с определенными \n" +
+                                "параметрами с целью получить наиболее лучшее качество работы модуля."
+                    AnchorPane.setTopAnchor(this@label, 15.0)
+                    AnchorPane.setLeftAnchor(this@label, 15.0)
+                }
+
             }
         }
     }
 
+    private fun setQualityOfVideo(qualityOfVideo: QualityOfVideo) {
+        when (qualityOfVideo) {
+            QualityOfVideo.HIGHEST -> {
+                widthOfVideo = 1280.0
+                heightOfVideo = 720.0
+            }
+            QualityOfVideo.HIGH -> {
+                widthOfVideo = 640.0
+                heightOfVideo = 480.0
+            }
+            QualityOfVideo.LOW -> {
+                widthOfVideo = 352.0
+                heightOfVideo = 240.0
+            }
+            QualityOfVideo.LOWEST -> {
+                widthOfVideo = 256.0
+                heightOfVideo = 144.0
+            }
+            QualityOfVideo.MEDIUM -> {
+                widthOfVideo = 480.0
+                heightOfVideo = 360.0
+            }
+        }
+        camerasProcessor.withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+    }
+
+    private fun setDelay(delay: Long) {
+        camerasProcessor.withDelay(delay)
+    }
+
+    private fun setRatio(ratio: Double) {
+        camerasProcessor.withRatio(ratio)
+    }
+
+    private fun setStaffUpdatePeriod(staffUpdatePeriod: Long) {
+        camerasProcessor.withStaffUpdatePeriod(staffUpdatePeriod)
+    }
+
+    private fun setFocus(focus: Double) {
+        camerasProcessor.withFocus(focus)
+    }
+
+    private fun setMethodNumber(methodNumber: Byte) {
+        camerasProcessor.withMethod(methodNumber)
+    }
+
+    private fun setDistanceBetweenCameras(distance: Double) {
+        camerasProcessor.withDistanceBetweenCameras(distance)
+    }
+
     private fun initLeftCamera() {
         if (leftCameraId.text.isNotEmpty()) {
-            camerasProcessor.startFirstCamera(
-                leftCameraId.text.toInt(),
-                fitWidthImage.toInt(),
-                fitHeightImage.toInt(),
-                hsvParams
-            )
+            camerasProcessor
+                .withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+                .startFirstCamera(
+                    leftCameraId.text.toInt(),
+                    hsvParams
+                )
         }
     }
 
     private fun initRightCamera() {
         if (rightCameraId.text.isNotEmpty()) {
-            camerasProcessor.startSecondCamera(
-                rightCameraId.text.toInt(),
-                fitWidthImage.toInt(),
-                fitHeightImage.toInt(),
-                hsvParams
-            )
+            camerasProcessor
+                .withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+                .startSecondCamera(
+                    rightCameraId.text.toInt(),
+                    hsvParams
+                )
         }
     }
 

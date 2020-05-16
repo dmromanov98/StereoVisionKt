@@ -9,10 +9,10 @@ import ru.mirea.core.models.ObjectPositionModel
 import kotlin.math.*
 
 class ObjectPosition(
-    private val centerOfFirstGrabber: Point,
-    private val centerOfSecondGrabber: Point,
     private val initializer: CamerasProcessorInterface
 ) : ObjectPositionInterface {
+
+    private var centerOfVideos: Point? = null
 
     private var dFirstCameraDownPoint: Point? = null
     private var dFirstCameraUpperPoint: Point? = null
@@ -35,15 +35,35 @@ class ObjectPosition(
         var delay: Long = 0
     }
 
+    fun reloadTimerParameters(): ObjectPosition {
+        if (timer != null) {
+            timer!!.stop()
+            timer = null
+            runTimer()
+        }
+        return this
+    }
+
+    private fun runTimer() {
+        Timer.staffUpdatePeriod = FrameGrabber.staffUpdatePeriod
+        Timer.delay = FrameGrabber.delay
+        timer = Timer(this)
+    }
+
     fun initAndRun() {
-        if (!calculating) {
-            run()
-            timer = Timer(this).withDelay(delay).withStaffUpdatePeriod(staffUpdatePeriod)
+        if (!calculating && centerOfVideos != null) {
+            runTimer()
         } else if (timer != null) {
             timer!!.stop()
             timer = null
         }
     }
+
+    fun withCenterOfVideos(centerOfVideos: Point): ObjectPosition {
+        this.centerOfVideos = centerOfVideos
+        return this
+    }
+
 
     fun withFirstCameraDownPoint(firstCameraDownPoint: Point): ObjectPosition {
         this.firstCameraDownPoint = firstCameraDownPoint
@@ -106,7 +126,7 @@ class ObjectPosition(
         2.toByte() -> calculateDistanceWithSecondMethod(
             dFirstCameraDownPoint!!,
             dSecondCameraDownPoint!!,
-            centerOfFirstGrabber
+            centerOfVideos!!
         )
         else -> throw MethodNotFoundException("Method with number $methodNumber not found")
     }
@@ -119,7 +139,7 @@ class ObjectPosition(
         2.toByte() -> calculateDistanceWithSecondMethod(
             dFirstCameraUpperPoint!!,
             dSecondCameraUpperPoint!!,
-            centerOfSecondGrabber
+            centerOfVideos!!
         )
         else -> throw MethodNotFoundException("Method with number $methodNumber not found")
     }
@@ -151,10 +171,10 @@ class ObjectPosition(
     }
 
     override fun deviationCount() {
-        dFirstCameraDownPoint = getDeviation(centerOfFirstGrabber, firstCameraDownPoint)
-        dFirstCameraUpperPoint = getDeviation(centerOfFirstGrabber, firstCameraUpperPoint)
-        dSecondCameraDownPoint = getDeviation(centerOfSecondGrabber, secondCameraDownPoint)
-        dSecondCameraUpperPoint = getDeviation(centerOfSecondGrabber, secondCameraUpperPoint)
+        dFirstCameraDownPoint = getDeviation(centerOfVideos!!, firstCameraDownPoint)
+        dFirstCameraUpperPoint = getDeviation(centerOfVideos!!, firstCameraUpperPoint)
+        dSecondCameraDownPoint = getDeviation(centerOfVideos!!, secondCameraDownPoint)
+        dSecondCameraUpperPoint = getDeviation(centerOfVideos!!, secondCameraUpperPoint)
     }
 
     private fun getDeviation(centerOfGrabber: Point, point: Point) =

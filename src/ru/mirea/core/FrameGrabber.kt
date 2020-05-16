@@ -11,8 +11,8 @@ import java.util.*
 
 class FrameGrabber(
     val cameraId: Int,
-    val width: Int,
-    val height: Int,
+    var width: Int,
+    var height: Int,
     private val initializer: CamerasProcessor
 ) : Runnable {
 
@@ -31,6 +31,21 @@ class FrameGrabber(
         var delay: Long = 0
     }
 
+    fun reloadTimerParameters(): FrameGrabber {
+        if (timer != null) {
+            timer!!.stop()
+            timer = null
+            runTimer()
+        }
+        return this
+    }
+
+    private fun runTimer() {
+        Timer.staffUpdatePeriod = staffUpdatePeriod
+        Timer.delay = delay
+        timer = Timer(this)
+    }
+
     fun initAndRunOrStop() {
         if (!cameraActive) {
             capture = VideoCapture()
@@ -38,8 +53,7 @@ class FrameGrabber(
             if (capture.isOpened) {
                 runLater { initializer.beforeRunning(cameraId) }
                 cameraActive = true
-                run()
-                timer = Timer(this).withStaffUpdatePeriod(staffUpdatePeriod).withDelay(delay)
+                runTimer()
             }
         } else {
             cameraActive = false

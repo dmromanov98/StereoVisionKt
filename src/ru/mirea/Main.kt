@@ -25,10 +25,11 @@ class Main : App(MainWindow::class) {
             }
         }
     }
+
 }
 
 fun main() {
-    val opencvpath = System.getProperty("user.dir") + "\\libraries\\"
-    System.load(opencvpath + Core.NATIVE_LIBRARY_NAME + ".dll")
+    val openCvPath = System.getProperty("user.dir") + "\\libraries\\"
+    System.load(openCvPath + Core.NATIVE_LIBRARY_NAME + ".dll")
     launch<Main>()
 }
