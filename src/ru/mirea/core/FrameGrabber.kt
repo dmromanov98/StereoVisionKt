@@ -22,13 +22,13 @@ class FrameGrabber(
     private var hsvMaskFrameImage = Mat()
     private var morphFrameImage = Mat()
     private var blur = false
-    private var hsvParams = HSVParams()
     var isThreadRun = false
     private var cameraActive = false
 
     companion object {
         var staffUpdatePeriod: Long = 33
         var delay: Long = 0
+        var hsvParams = HSVParams()
     }
 
     fun reloadTimerParameters(): FrameGrabber {
@@ -108,11 +108,6 @@ class FrameGrabber(
             }
         }
         return frame
-    }
-
-    fun withHSVRange(hsvParams: HSVParams): FrameGrabber {
-        this.hsvParams = hsvParams
-        return this
     }
 
     private fun getFrameWithHSVRange(image: Mat): Mat {

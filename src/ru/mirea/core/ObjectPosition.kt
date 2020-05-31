@@ -64,7 +64,6 @@ class ObjectPosition(
         return this
     }
 
-
     fun withFirstCameraDownPoint(firstCameraDownPoint: Point): ObjectPosition {
         this.firstCameraDownPoint = firstCameraDownPoint
         return this
@@ -145,8 +144,8 @@ class ObjectPosition(
     }
 
     override fun calculateDistanceWithFirstMethod(point1: Point, point2: Point): Double {
-        val alpha = 90 - Math.toDegrees(atan(point1.x / focus))
-        val beta = 90 - Math.toDegrees(atan(point2.x / focus))
+        val alpha = 90 - Math.toDegrees(atan(focus / point1.x))
+        val beta = 90 - Math.toDegrees(atan(focus / point2.x))
         val gamma = 180 - alpha - beta
         val m: Double = (sin(Math.toRadians(alpha)) * distanceBetweenCameras) / sin(Math.toRadians(gamma))
         val r = sqrt(

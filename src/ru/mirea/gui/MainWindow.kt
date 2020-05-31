@@ -2,11 +2,9 @@ package ru.mirea.gui
 
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.geometry.Orientation
-import javafx.scene.control.Button
-import javafx.scene.control.Label
-import javafx.scene.control.Slider
-import javafx.scene.control.TextField
+import javafx.scene.control.*
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.AnchorPane
@@ -17,16 +15,18 @@ import ru.mirea.core.enums.QualityOfVideo
 import ru.mirea.core.interfaces.ObjectPositionLibraryInterface
 import ru.mirea.core.models.HSVParams
 import ru.mirea.core.models.ObjectPositionModel
+import ru.mirea.core.models.SettingsParams
+import ru.mirea.database.provider.HibernateProvider
+import ru.mirea.database.schema.Settings
 import tornadofx.*
 
-class MainWindow : View("Detection Object Definition"),
+class MainWindow : View("Определение позиции объекта"),
     ObjectPositionLibraryInterface {
     private var hsvParams = HSVParams()
+    private var hibernateProvider = HibernateProvider().setupSession()
+
     private val fitWidthImage = 620.0
     private val fitHeightImage = 620.0
-    private var widthOfVideo = 1280.0
-    private var heightOfVideo = 720.0
-
     private val fitWidthMaskAndMorphImage = 365.0
     private val fitHeightMaskAndMorphImage = 365.0
 
@@ -38,6 +38,7 @@ class MainWindow : View("Detection Object Definition"),
     private lateinit var rightMaskImage: ImageView
     private lateinit var leftCameraId: TextField
     private lateinit var rightCameraId: TextField
+    private lateinit var macrosName: TextField
     private lateinit var leftCameraButton: Button
     private lateinit var rightCameraButton: Button
     private lateinit var hueStart: Slider
@@ -49,7 +50,17 @@ class MainWindow : View("Detection Object Definition"),
     private lateinit var distanceDownPointFirstTab: Label
     private lateinit var distanceUpperPointFirstTab: Label
     private lateinit var clickedFirstTab: Label
+    private lateinit var qualityOfVideoComboBox: ComboBox<String>
+    private lateinit var macrosTableView: TableView<Settings>
+    private lateinit var focusLengthField: TextField
+    private lateinit var staffUpdatePeriodField: TextField
+    private lateinit var delayField: TextField
+    private lateinit var methodNumberField: TextField
+    private lateinit var distanceBetweenCamerasField: TextField
+    private lateinit var ratioField: TextField
+
     private var camerasProcessor = CamerasProcessor(this)
+    private var settingsData = FXCollections.observableArrayList(hibernateProvider.get(Settings()))
 
     override val root: StackPane = stackpane {
         prefWidth = 1280.0
@@ -177,7 +188,6 @@ class MainWindow : View("Detection Object Definition"),
                         AnchorPane.setTopAnchor(this@label, 195.0)
                         AnchorPane.setLeftAnchor(this@label, 350.0)
                     }
-
                     saturationStop = slider {
                         min = 0.0
                         max = 255.0
@@ -279,7 +289,7 @@ class MainWindow : View("Detection Object Definition"),
                         AnchorPane.setTopAnchor(this@separator, 450.0)
                         AnchorPane.setLeftAnchor(this@separator, 15.0)
                     }
-                    textfield {
+                    focusLengthField = textfield {
                         promptText = "Фокусное расстояние"
                         filterInput { it.controlNewText.isDouble() }
                         prefWidth = 330.0
@@ -291,7 +301,7 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    textfield {
+                    staffUpdatePeriodField = textfield {
                         promptText = "Время обновления кадра (мс)"
                         filterInput { it.controlNewText.isLong() }
                         prefWidth = 330.0
@@ -303,7 +313,7 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    textfield {
+                    delayField = textfield {
                         promptText = "Время задержки (мс)"
                         filterInput { it.controlNewText.isLong() }
                         prefWidth = 330.0
@@ -315,7 +325,7 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    textfield {
+                    methodNumberField = textfield {
                         promptText = "Номер алгоритма (0-255)"
                         filterInput { it.controlNewText.isInt() }
                         prefWidth = 330.0
@@ -327,7 +337,7 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    textfield {
+                    distanceBetweenCamerasField = textfield {
                         promptText = "Расстояние между камерами"
                         filterInput { it.controlNewText.isDouble() }
                         prefWidth = 330.0
@@ -339,7 +349,7 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    textfield {
+                    ratioField = textfield {
                         promptText = "Зависимость расстояния от пикселей (для алгоритма 2)"
                         filterInput { it.controlNewText.isDouble() }
                         prefWidth = 330.0
@@ -351,55 +361,121 @@ class MainWindow : View("Detection Object Definition"),
                             }
                         }
                     }
-                    combobox(
+                    qualityOfVideoComboBox = combobox(
                         SimpleStringProperty(QualityOfVideo.HIGHEST.name),
                         QualityOfVideo.values().map { it.name }) {
                         AnchorPane.setTopAnchor(this@combobox, 660.0)
                         AnchorPane.setLeftAnchor(this@combobox, 15.0)
                         valueProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
-                            setQualityOfVideo(QualityOfVideo.valueOf(newValue))
+                            setQualityOfVideo()
                         }
                     }
                 }
             }
-
-            tab("Тестирование") {
-                label {
-                    text =
-                        "В данном разделе вы можете протестировать используемое вами оборудование с определенными \n" +
-                                "параметрами с целью получить наиболее лучшее качество работы модуля."
-                    AnchorPane.setTopAnchor(this@label, 15.0)
-                    AnchorPane.setLeftAnchor(this@label, 15.0)
+            tab("Макросы") {
+                anchorpane {
+                    label {
+                        text =
+                            "В данном разделе вы можете сохранить текущие параметры работы."
+                        AnchorPane.setTopAnchor(this@label, 15.0)
+                        AnchorPane.setLeftAnchor(this@label, 15.0)
+                    }
+                    macrosTableView = tableview(settingsData) {
+                        readonlyColumn("Идентификатор", Settings::id).fixedWidth(100)
+                        readonlyColumn("Название", Settings::name).fixedWidth(300)
+                        AnchorPane.setTopAnchor(this@tableview, 40.0)
+                        AnchorPane.setLeftAnchor(this@tableview, 15.0)
+                        prefHeight = 600.0
+                        prefWidth = 405.0
+                    }
+                    button("Удалить выбранные параметры") {
+                        prefWidth = 250.0
+                        AnchorPane.setTopAnchor(this@button, 50.0)
+                        AnchorPane.setLeftAnchor(this@button, 440.0)
+                        action {
+                            deleteSettings()
+                        }
+                    }
+                    button("Использовать выбранные параметры") {
+                        prefWidth = 250.0
+                        AnchorPane.setTopAnchor(this@button, 80.0)
+                        AnchorPane.setLeftAnchor(this@button, 440.0)
+                        action {
+                            loadSettings()
+                        }
+                    }
+                    macrosName = textfield {
+                        prefWidth = 250.0
+                        promptText = "Название макроса текущих параметров"
+                        AnchorPane.setTopAnchor(this@textfield, 110.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 440.0)
+                    }
+                    button("Сохранить текущие параметры") {
+                        prefWidth = 250.0
+                        AnchorPane.setTopAnchor(this@button, 140.0)
+                        AnchorPane.setLeftAnchor(this@button, 440.0)
+                        action {
+                            saveSettings()
+                        }
+                    }
                 }
-
             }
         }
     }
 
-    private fun setQualityOfVideo(qualityOfVideo: QualityOfVideo) {
-        when (qualityOfVideo) {
-            QualityOfVideo.HIGHEST -> {
-                widthOfVideo = 1280.0
-                heightOfVideo = 720.0
-            }
-            QualityOfVideo.HIGH -> {
-                widthOfVideo = 640.0
-                heightOfVideo = 480.0
-            }
-            QualityOfVideo.LOW -> {
-                widthOfVideo = 352.0
-                heightOfVideo = 240.0
-            }
-            QualityOfVideo.LOWEST -> {
-                widthOfVideo = 256.0
-                heightOfVideo = 144.0
-            }
-            QualityOfVideo.MEDIUM -> {
-                widthOfVideo = 480.0
-                heightOfVideo = 360.0
-            }
+    private fun deleteSettings() {
+        val selectedSettings = macrosTableView.selectedItem
+        if (selectedSettings != null && hibernateProvider.delete(selectedSettings)) {
+            settingsData.remove(selectedSettings)
         }
-        camerasProcessor.withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+    }
+
+    private fun loadSettings() {
+        val selectedSettings = macrosTableView.selectedItem
+        if (selectedSettings != null) {
+            hueStart.value = selectedSettings.hueStart
+            hueStop.value = selectedSettings.hueStop
+            saturationStart.value = selectedSettings.saturationStart
+            saturationStop.value = selectedSettings.saturationStop
+            valueStart.value = selectedSettings.valueStart
+            valueStop.value = selectedSettings.valueStop
+            focusLengthField.text = selectedSettings.focusLength.toString()
+            staffUpdatePeriodField.text = selectedSettings.staffUpdatePeriod.toString()
+            delayField.text = selectedSettings.delay.toString()
+            methodNumberField.text = selectedSettings.methodNumber.toString()
+            distanceBetweenCamerasField.text = selectedSettings.distanceBetweenCameras.toString()
+            ratioField.text = selectedSettings.ratio.toString()
+            qualityOfVideoComboBox.selectionModel.select(selectedSettings.qualityOfVideo)
+        }
+    }
+
+    private fun saveSettings() {
+        val settingsParams = camerasProcessor.getSettingsParams()
+        val settings = settingsParamToSettings(settingsParams, macrosName.text)
+        if (hibernateProvider.add(settings)) {
+            settingsData.add(settings)
+        }
+    }
+
+    private fun settingsParamToSettings(settingsParams: SettingsParams, name: String) = Settings(
+        name = name,
+        hueStart = settingsParams.hsvParams.hueStart,
+        hueStop = settingsParams.hsvParams.hueStop,
+        saturationStart = settingsParams.hsvParams.saturationStart,
+        saturationStop = settingsParams.hsvParams.saturationStop,
+        valueStart = settingsParams.hsvParams.valueStart,
+        valueStop = settingsParams.hsvParams.valueStop,
+        focusLength = settingsParams.focusLength,
+        staffUpdatePeriod = settingsParams.staffUpdatePeriod,
+        delay = settingsParams.delay,
+        methodNumber = settingsParams.methodNumber,
+        distanceBetweenCameras = settingsParams.distanceBetweenCameras,
+        ratio = settingsParams.ratio,
+        qualityOfVideo = settingsParams.qualityOfVideo.name
+    )
+
+    private fun setQualityOfVideo() {
+        camerasProcessor.withQualityOfVideo(QualityOfVideo.valueOf(qualityOfVideoComboBox.value))
     }
 
     private fun setDelay(delay: Long) {
@@ -429,7 +505,7 @@ class MainWindow : View("Detection Object Definition"),
     private fun initLeftCamera() {
         if (leftCameraId.text.isNotEmpty()) {
             camerasProcessor
-                .withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+                .withQualityOfVideo(QualityOfVideo.valueOf(qualityOfVideoComboBox.value))
                 .startFirstCamera(
                     leftCameraId.text.toInt(),
                     hsvParams
@@ -440,7 +516,7 @@ class MainWindow : View("Detection Object Definition"),
     private fun initRightCamera() {
         if (rightCameraId.text.isNotEmpty()) {
             camerasProcessor
-                .withWidthAndHeightOfVideo(widthOfVideo, heightOfVideo)
+                .withQualityOfVideo(QualityOfVideo.valueOf(qualityOfVideoComboBox.value))
                 .startSecondCamera(
                     rightCameraId.text.toInt(),
                     hsvParams

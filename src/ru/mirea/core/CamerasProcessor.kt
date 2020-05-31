@@ -2,10 +2,12 @@ package ru.mirea.core
 
 import javafx.scene.image.Image
 import org.opencv.core.Point
+import ru.mirea.core.enums.QualityOfVideo
 import ru.mirea.core.interfaces.ObjectPositionLibraryInterface
 import ru.mirea.core.interfaces.CamerasProcessorInterface
 import ru.mirea.core.models.HSVParams
 import ru.mirea.core.models.ObjectPositionModel
+import ru.mirea.core.models.SettingsParams
 
 class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) : CamerasProcessorInterface {
     companion object {
@@ -18,14 +20,29 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
 
     private var firstCameraId: Int? = null
     private var secondCameraId: Int? = null
+
     private var firstCameraFirstCenter: Point = Point(0.0, 0.0) //down point
     private var firstCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
     private var secondCameraFirstCenter: Point = Point(0.0, 0.0)  //down point
     private var secondCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
+
     private var distanceBetweenCameras = 130.0
-    private var focus = 150.0
+    private var focus = 865.0
     private var method: Byte = 1
     private var ratio = 26.5
+    private var qualityOfVideo: QualityOfVideo = QualityOfVideo.HIGHEST
+
+    fun getSettingsParams() =
+        SettingsParams(
+            hsvParams = FrameGrabber.hsvParams,
+            focusLength = focus,
+            staffUpdatePeriod = FrameGrabber.staffUpdatePeriod,
+            delay = FrameGrabber.delay,
+            methodNumber = method,
+            distanceBetweenCameras = distanceBetweenCameras,
+            ratio = ratio,
+            qualityOfVideo = qualityOfVideo
+        )
 
     fun withStaffUpdatePeriod(staffUpdatePeriod: Long): CamerasProcessor {
         FrameGrabber.staffUpdatePeriod = staffUpdatePeriod
@@ -51,9 +68,29 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         return this
     }
 
-    fun withWidthAndHeightOfVideo(widthOfVideo: Double, heightOfVideo: Double): CamerasProcessor {
-        CamerasProcessor.widthOfVideo = widthOfVideo
-        CamerasProcessor.heightOfVideo = heightOfVideo
+    fun withQualityOfVideo(qualityOfVideo: QualityOfVideo): CamerasProcessor {
+        when (qualityOfVideo) {
+            QualityOfVideo.HIGHEST -> {
+                widthOfVideo = 1280.0
+                heightOfVideo = 720.0
+            }
+            QualityOfVideo.HIGH -> {
+                widthOfVideo = 640.0
+                heightOfVideo = 480.0
+            }
+            QualityOfVideo.LOW -> {
+                widthOfVideo = 352.0
+                heightOfVideo = 240.0
+            }
+            QualityOfVideo.LOWEST -> {
+                widthOfVideo = 256.0
+                heightOfVideo = 144.0
+            }
+            QualityOfVideo.MEDIUM -> {
+                widthOfVideo = 480.0
+                heightOfVideo = 360.0
+            }
+        }
         if (firstCamera != null && firstCamera!!.isThreadRun) {
             firstCamera!!.width = widthOfVideo.toInt()
             firstCamera!!.height = heightOfVideo.toInt()
@@ -62,6 +99,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             secondCamera!!.width = widthOfVideo.toInt()
             secondCamera!!.height = heightOfVideo.toInt()
         }
+        this.qualityOfVideo = qualityOfVideo
         return this
     }
 
@@ -124,12 +162,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
     }
 
     fun updateHSVParams(hsvParams: HSVParams) {
-        if (firstCamera != null) {
-            firstCamera!!.withHSVRange(hsvParams)
-        }
-        if (secondCamera != null) {
-            secondCamera!!.withHSVRange(hsvParams)
-        }
+        FrameGrabber.hsvParams = hsvParams
     }
 
     override fun loadImage(image: Image, cameraId: Int) {

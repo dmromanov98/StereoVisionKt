@@ -29,6 +29,13 @@ dependencies {
     implementation "no.tornado:tornadofx:$tornadofx_version"
     implementation "com.jfoenix:jfoenix:$jfoenix_version"
     implementation "org.openpnp:opencv:$opencv_version"
+
+    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "org.hibernate:hibernate-c3p0:$hibernate_version"
+    implementation "org.hibernate:hibernate-entitymanager:$hibernate_version"
+
+    implementation "org.postgresql:postgresql:$postgresql_version"
+
     testCompile group: 'junit', name: 'junit', version: "$junit_version"
 }
 
