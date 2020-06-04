@@ -58,6 +58,7 @@ class MainWindow : View("Определение позиции объекта"),
     private lateinit var methodNumberField: TextField
     private lateinit var distanceBetweenCamerasField: TextField
     private lateinit var ratioField: TextField
+    private lateinit var measurementNumberField: TextField
 
     private var camerasProcessor = CamerasProcessor(this)
     private var settingsData = FXCollections.observableArrayList(hibernateProvider.get(Settings()))
@@ -361,10 +362,22 @@ class MainWindow : View("Определение позиции объекта"),
                             }
                         }
                     }
+                    measurementNumberField = textfield {
+                        promptText = "Количество измерений"
+                        filterInput { it.controlNewText.isInt() }
+                        prefWidth = 330.0
+                        AnchorPane.setTopAnchor(this@textfield, 660.0)
+                        AnchorPane.setLeftAnchor(this@textfield, 15.0)
+                        textProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                            if (newValue.isNotEmpty()) {
+                                setMeasurementNumber(newValue.toInt())
+                            }
+                        }
+                    }
                     qualityOfVideoComboBox = combobox(
                         SimpleStringProperty(QualityOfVideo.HIGHEST.name),
                         QualityOfVideo.values().map { it.name }) {
-                        AnchorPane.setTopAnchor(this@combobox, 660.0)
+                        AnchorPane.setTopAnchor(this@combobox, 690.0)
                         AnchorPane.setLeftAnchor(this@combobox, 15.0)
                         valueProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
                             setQualityOfVideo()
@@ -446,6 +459,7 @@ class MainWindow : View("Определение позиции объекта"),
             distanceBetweenCamerasField.text = selectedSettings.distanceBetweenCameras.toString()
             ratioField.text = selectedSettings.ratio.toString()
             qualityOfVideoComboBox.selectionModel.select(selectedSettings.qualityOfVideo)
+            measurementNumberField.text = selectedSettings.measurementNumber.toString()
         }
     }
 
@@ -471,7 +485,8 @@ class MainWindow : View("Определение позиции объекта"),
         methodNumber = settingsParams.methodNumber,
         distanceBetweenCameras = settingsParams.distanceBetweenCameras,
         ratio = settingsParams.ratio,
-        qualityOfVideo = settingsParams.qualityOfVideo.name
+        qualityOfVideo = settingsParams.qualityOfVideo.name,
+        measurementNumber = settingsParams.measurementNumber
     )
 
     private fun setQualityOfVideo() {
@@ -484,6 +499,10 @@ class MainWindow : View("Определение позиции объекта"),
 
     private fun setRatio(ratio: Double) {
         camerasProcessor.withRatio(ratio)
+    }
+
+    private fun setMeasurementNumber(measurementNumber: Int) {
+        camerasProcessor.withMeasurementNumber(measurementNumber)
     }
 
     private fun setStaffUpdatePeriod(staffUpdatePeriod: Long) {

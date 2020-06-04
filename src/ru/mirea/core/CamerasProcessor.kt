@@ -25,6 +25,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
     private var firstCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
     private var secondCameraFirstCenter: Point = Point(0.0, 0.0)  //down point
     private var secondCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
+    private var measurementNumber: Int = 10
 
     private var distanceBetweenCameras = 130.0
     private var focus = 865.0
@@ -41,7 +42,8 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             methodNumber = method,
             distanceBetweenCameras = distanceBetweenCameras,
             ratio = ratio,
-            qualityOfVideo = qualityOfVideo
+            qualityOfVideo = qualityOfVideo,
+            measurementNumber = measurementNumber
         )
 
     fun withStaffUpdatePeriod(staffUpdatePeriod: Long): CamerasProcessor {
@@ -156,6 +158,14 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         return this
     }
 
+    fun withMeasurementNumber(measurementNumber: Int): CamerasProcessor {
+        this.measurementNumber = measurementNumber
+        if (objectPosition != null) {
+            objectPosition!!.withMeasurementNumber(this.measurementNumber)
+        }
+        return this
+    }
+
     fun withDistanceBetweenCameras(distanceBetweenCameras: Double): CamerasProcessor {
         this.distanceBetweenCameras = distanceBetweenCameras
         return this
@@ -212,6 +222,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
                     .withMethod(method)
                     .withRatio(ratio)
                     .withCenterOfVideos(getCenter())
+                    .withMeasurementNumber(measurementNumber)
                 objectPosition!!.initAndRun()
             } else {
                 objectPosition!!.withDistanceBetweenCameras(distanceBetweenCameras)
@@ -223,6 +234,7 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
                     .withMethod(method)
                     .withRatio(ratio)
                     .withCenterOfVideos(getCenter())
+                    .withMeasurementNumber(measurementNumber)
             }
         } else if (objectPosition != null && objectPosition!!.calculating) {
             objectPosition!!.stopCalculating()

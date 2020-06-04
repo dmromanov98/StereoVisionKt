@@ -10,5 +10,6 @@ data class SettingsParams(
     val methodNumber: Byte,
     val distanceBetweenCameras: Double,
     val ratio: Double,
-    val qualityOfVideo: QualityOfVideo
+    val qualityOfVideo: QualityOfVideo,
+    val measurementNumber: Int
 )

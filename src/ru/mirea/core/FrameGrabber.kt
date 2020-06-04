@@ -8,6 +8,7 @@ import ru.mirea.core.models.HSVParams
 import tornadofx.runLater
 import java.lang.IndexOutOfBoundsException
 import java.util.*
+import kotlin.collections.ArrayList
 
 class FrameGrabber(
     val cameraId: Int,
@@ -148,22 +149,20 @@ class FrameGrabber(
             val contours = findContours(morphFrameImage)
             mainFrameImage = drawContours(morphFrameImage, mainFrameImage, contours)
             val centers = arrayListOf<Point>()
+            var contoursSize = 2
             contours.forEach {
-                val centerOfObject = getObjectCenterPoint(it)
-                centers.add(centerOfObject)
-                Imgproc.circle(
-                    mainFrameImage, centerOfObject, 5,
-                    Scalar(255.0, 255.0, 255.0), -1
-                )
-            }
-
-            toInitializer()
-            runLater {
-                try {
-                    initializer.loadCenters(centers[0], centers[1], cameraId)
-                } catch (ex: IndexOutOfBoundsException) {
+                if(contoursSize > 0) {
+                    val centerOfObject = getObjectCenterPoint(it)
+                    centers.add(centerOfObject)
+                    Imgproc.circle(
+                        mainFrameImage, centerOfObject, 5,
+                        Scalar(255.0, 255.0, 255.0), -1
+                    )
+                    contoursSize--
                 }
             }
+
+            toInitializer(centers)
         } catch (ex: java.lang.Exception) {
             isThreadRun = false
         }
@@ -171,17 +170,20 @@ class FrameGrabber(
 
     }
 
-    private fun toInitializer() {
+    private fun toInitializer(centers: ArrayList<Point>) {
         runLater {
             initializer.loadImage(Utils.mat2Image(mainFrameImage)!!, cameraId)
             initializer.loadMaskImage(Utils.mat2Image(hsvMaskFrameImage)!!, cameraId)
             initializer.loadMorphImage(Utils.mat2Image(morphFrameImage)!!, cameraId)
+            try {
+                initializer.loadCenters(centers[0], centers[1], cameraId)
+            } catch (ex: IndexOutOfBoundsException) {
+            }
         }
     }
 
     private fun getObjectCenterPoint(image: Mat): Point {
         val moments = Imgproc.moments(image)
-
         return Point((moments.m10 / moments.m00), (moments.m01 / moments.m00))
     }
 

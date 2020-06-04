@@ -64,6 +64,10 @@ data class Settings(
 
     @Basic
     @Column(name = "quality_of_video", nullable = false)
-    val qualityOfVideo: String = "HIGHEST"
+    val qualityOfVideo: String = "HIGHEST",
+
+    @Basic
+    @Column(name = "measurement_number", nullable = false)
+    val measurementNumber: Int = 10
 
 )

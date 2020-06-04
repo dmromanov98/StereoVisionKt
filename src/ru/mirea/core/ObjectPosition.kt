@@ -20,6 +20,10 @@ class ObjectPosition(
     private var dSecondCameraUpperPoint: Point? = null
     private var methodNumber: Byte = 1
     private var ratio = 26.5
+    private var measurementNumber: Int = 5
+    private var currentMeasurementNumber: Int = 0
+    private var currentValueUpperPoint: Double = 0.0
+    private var currentValueDownPoint: Double = 0.0
     var calculating: Boolean = false
 
     private var firstCameraDownPoint = Point(0.0, 0.0)
@@ -29,11 +33,6 @@ class ObjectPosition(
     private var focus = 0.0
     private var distanceBetweenCameras = 0.0
     private var timer: Timer? = null
-
-    companion object {
-        var staffUpdatePeriod: Long = 33
-        var delay: Long = 0
-    }
 
     fun reloadTimerParameters(): ObjectPosition {
         if (timer != null) {
@@ -104,13 +103,31 @@ class ObjectPosition(
         return this
     }
 
+    fun withMeasurementNumber(measurementNumber: Int): ObjectPosition {
+        this.measurementNumber = measurementNumber
+        return this
+    }
+
     override fun calculateDistances() {
         deviationCount()
-        val distanceDownPoint = distanceDownPoint()
-        val distanceUpperPoint = distanceUpperPoint()
-        val clicked = checkClicked(distanceDownPoint, distanceUpperPoint)
-        val objectPosition = ObjectPositionModel(distanceDownPoint, distanceUpperPoint, clicked)
-        Platform.runLater { initializer.loadObjectPosition(objectPosition) }
+        currentValueDownPoint += distanceDownPoint()
+        currentValueUpperPoint += distanceUpperPoint()
+        currentMeasurementNumber++
+        if (measurementNumber == currentMeasurementNumber) {
+            val clicked =
+                checkClicked(
+                    currentValueDownPoint / measurementNumber,
+                    currentValueUpperPoint / measurementNumber
+                )
+            val objectPosition = ObjectPositionModel(
+                currentValueDownPoint / measurementNumber,
+                currentValueUpperPoint / measurementNumber, clicked
+            )
+            currentMeasurementNumber = 0
+            currentValueUpperPoint = 0.0
+            currentValueDownPoint = 0.0
+            Platform.runLater { initializer.loadObjectPosition(objectPosition) }
+        }
     }
 
     override fun checkClicked(distanceDownPoint: Double, distanceUpperPoint: Double): Boolean {
@@ -147,6 +164,7 @@ class ObjectPosition(
         val alpha = 90 - Math.toDegrees(atan(focus / point1.x))
         val beta = 90 - Math.toDegrees(atan(focus / point2.x))
         val gamma = 180 - alpha - beta
+
         val m: Double = (sin(Math.toRadians(alpha)) * distanceBetweenCameras) / sin(Math.toRadians(gamma))
         val r = sqrt(
             (distanceBetweenCameras / 2).pow(2.0) + m.pow(2.0) -

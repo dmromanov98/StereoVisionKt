@@ -16,8 +16,8 @@
         <property name="hibernate.c3p0.max_size">1</property>
         <property name="hibernate.c3p0.timeout">600</property>
 
-        <property name="connection.username"></property>
-        <property name="connection.password"></property>
+        <property name="connection.username">postgres</property>
+        <property name="connection.password">2282</property>
 
         <mapping class="ru.mirea.database.schema.Settings"/>
     </session-factory>
