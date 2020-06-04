@@ -6,6 +6,8 @@ import ru.mirea.core.exceptions.MethodNotFoundException
 import ru.mirea.core.interfaces.CamerasProcessorInterface
 import ru.mirea.core.interfaces.ObjectPositionInterface
 import ru.mirea.core.models.ObjectPositionModel
+import java.lang.Math.toDegrees
+import java.lang.Math.toRadians
 import kotlin.math.*
 
 class ObjectPosition(
@@ -33,6 +35,10 @@ class ObjectPosition(
     private var focus = 0.0
     private var distanceBetweenCameras = 0.0
     private var timer: Timer? = null
+
+    companion object {
+        var verticalAccounting: Boolean = false
+    }
 
     fun reloadTimerParameters(): ObjectPosition {
         if (timer != null) {
@@ -163,17 +169,21 @@ class ObjectPosition(
     }
 
     override fun calculateDistanceWithFirstMethod(point1: Point, point2: Point): Double {
-        val alpha = 90 - Math.toDegrees(atan(focus / point1.x))
-        val beta = 90 - Math.toDegrees(atan(focus / point2.x))
+        val alpha = toDegrees(atan(focus / point1.x))
+        val beta = toDegrees(atan(focus / point2.x))
         val gamma = 180 - alpha - beta
 
-        val m: Double = (sin(Math.toRadians(alpha)) * distanceBetweenCameras) / sin(Math.toRadians(gamma))
+        val m: Double = (sin(toRadians(alpha)) * distanceBetweenCameras) / sin(toRadians(gamma))
         val r = sqrt(
             (distanceBetweenCameras / 2).pow(2.0) + m.pow(2.0) -
-                    distanceBetweenCameras * m * cos(Math.toRadians(beta))
+                    distanceBetweenCameras * m * cos(toRadians(beta))
         )
-        val dy = (point1.y + point2.y) / 2
-        return r / cos(90 - atan(dy / r))
+        if (verticalAccounting) {
+            val dy = (point1.y + point2.y) / 2
+            val teta = toDegrees(atan(dy / focus))
+            return r / cos(toRadians(teta))
+        }
+        return r
     }
 
     override fun calculateDistanceWithSecondMethod(point1: Point, point2: Point, center: Point): Double {
@@ -182,10 +192,10 @@ class ObjectPosition(
         val gamma = 180 - alpha - beta
         val dy = (point1.y + point2.y) / 2
         val alphaY = dy / (center.x * ratio)
-        val b = (distanceBetweenCameras / sin(Math.toRadians(gamma))) * sin(Math.toRadians(beta)) /
+        val b = (distanceBetweenCameras / sin(toRadians(gamma))) * sin(toRadians(beta)) /
                 cos(Math.toRadians(alphaY))
-        val c = (distanceBetweenCameras / sin(Math.toRadians(gamma))) * sin(Math.toRadians(alpha)) /
-                cos(Math.toRadians(alphaY))
+        val c = (distanceBetweenCameras / sin(toRadians(gamma))) * sin(toRadians(alpha)) /
+                cos(toRadians(alphaY))
         return 0.5 * sqrt(2 * b.pow(2) + 2 * c.pow(2) - distanceBetweenCameras.pow(2))
     }
 
