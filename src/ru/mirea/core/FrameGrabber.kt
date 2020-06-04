@@ -6,9 +6,6 @@ import org.opencv.imgproc.Imgproc
 import org.opencv.videoio.VideoCapture
 import ru.mirea.core.models.HSVParams
 import tornadofx.runLater
-import java.lang.IndexOutOfBoundsException
-import java.util.*
-import kotlin.collections.ArrayList
 
 class FrameGrabber(
     val cameraId: Int,
@@ -151,12 +148,17 @@ class FrameGrabber(
             val centers = arrayListOf<Point>()
             var contoursSize = 2
             contours.forEach {
-                if(contoursSize > 0) {
+                if (contoursSize > 0) {
                     val centerOfObject = getObjectCenterPoint(it)
                     centers.add(centerOfObject)
                     Imgproc.circle(
                         mainFrameImage, centerOfObject, 5,
                         Scalar(255.0, 255.0, 255.0), -1
+                    )
+                    Imgproc.putText(
+                        mainFrameImage, "(${centerOfObject.x}, ${centerOfObject.y})",
+                        Point(centerOfObject.x - 20, centerOfObject.y - 20),
+                        Core.FONT_HERSHEY_COMPLEX, 0.5, Scalar(255.0, 255.0, 255.0), 0
                     )
                     contoursSize--
                 }

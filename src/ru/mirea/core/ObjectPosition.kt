@@ -51,10 +51,12 @@ class ObjectPosition(
 
     fun initAndRun() {
         if (!calculating && centerOfVideos != null) {
+            calculating = true
             runTimer()
         } else if (timer != null) {
             timer!!.stop()
             timer = null
+            calculating = false
         }
     }
 

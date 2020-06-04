@@ -59,6 +59,7 @@ class MainWindow : View("Определение позиции объекта"),
     private lateinit var distanceBetweenCamerasField: TextField
     private lateinit var ratioField: TextField
     private lateinit var measurementNumberField: TextField
+    private lateinit var verticalAccountingCheckBox: CheckBox
 
     private var camerasProcessor = CamerasProcessor(this)
     private var settingsData = FXCollections.observableArrayList(hibernateProvider.get(Settings()))
@@ -379,8 +380,15 @@ class MainWindow : View("Определение позиции объекта"),
                         QualityOfVideo.values().map { it.name }) {
                         AnchorPane.setTopAnchor(this@combobox, 690.0)
                         AnchorPane.setLeftAnchor(this@combobox, 15.0)
-                        valueProperty().addListener { _: ObservableValue<out String>, _: String, newValue: String ->
+                        valueProperty().addListener { _: ObservableValue<out String>, _: String, _: String ->
                             setQualityOfVideo()
+                        }
+                    }
+                    verticalAccountingCheckBox = checkbox("Учитывать расстояние по вертикали при расчете") {
+                        AnchorPane.setTopAnchor(this@checkbox, 720.0)
+                        AnchorPane.setLeftAnchor(this@checkbox, 15.0)
+                        selectedProperty().addListener { _: ObservableValue<out Boolean>, _: Boolean, newValue: Boolean ->
+                            setVerticalAccounting(newValue)
                         }
                     }
                 }
@@ -436,6 +444,10 @@ class MainWindow : View("Определение позиции объекта"),
         }
     }
 
+    private fun setVerticalAccounting(value: Boolean) {
+        camerasProcessor.withVerticalAccounting(value)
+    }
+
     private fun deleteSettings() {
         val selectedSettings = macrosTableView.selectedItem
         if (selectedSettings != null && hibernateProvider.delete(selectedSettings)) {
@@ -460,6 +472,7 @@ class MainWindow : View("Определение позиции объекта"),
             ratioField.text = selectedSettings.ratio.toString()
             qualityOfVideoComboBox.selectionModel.select(selectedSettings.qualityOfVideo)
             measurementNumberField.text = selectedSettings.measurementNumber.toString()
+            verticalAccountingCheckBox.isSelected = selectedSettings.verticalAccounting
         }
     }
 
@@ -486,7 +499,8 @@ class MainWindow : View("Определение позиции объекта"),
         distanceBetweenCameras = settingsParams.distanceBetweenCameras,
         ratio = settingsParams.ratio,
         qualityOfVideo = settingsParams.qualityOfVideo.name,
-        measurementNumber = settingsParams.measurementNumber
+        measurementNumber = settingsParams.measurementNumber,
+        verticalAccounting = settingsParams.verticalAccounting
     )
 
     private fun setQualityOfVideo() {

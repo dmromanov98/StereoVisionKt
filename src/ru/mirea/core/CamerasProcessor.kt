@@ -21,10 +21,10 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
     private var firstCameraId: Int? = null
     private var secondCameraId: Int? = null
 
-    private var firstCameraFirstCenter: Point = Point(0.0, 0.0) //down point
-    private var firstCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
-    private var secondCameraFirstCenter: Point = Point(0.0, 0.0)  //down point
-    private var secondCameraSecondCenter: Point = Point(0.0, 0.0)  //upper point
+    private var firstCameraDownPoint: Point = Point(0.0, 0.0) //down point
+    private var firstCameraUpperPoint: Point = Point(0.0, 0.0)  //upper point
+    private var secondCameraDownPoint: Point = Point(0.0, 0.0)  //down point
+    private var secondCameraUpperPoint: Point = Point(0.0, 0.0)  //upper point
     private var measurementNumber: Int = 10
 
     private var distanceBetweenCameras = 130.0
@@ -43,12 +43,18 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             distanceBetweenCameras = distanceBetweenCameras,
             ratio = ratio,
             qualityOfVideo = qualityOfVideo,
-            measurementNumber = measurementNumber
+            measurementNumber = measurementNumber,
+            verticalAccounting = ObjectPosition.verticalAccounting
         )
 
     fun withStaffUpdatePeriod(staffUpdatePeriod: Long): CamerasProcessor {
         FrameGrabber.staffUpdatePeriod = staffUpdatePeriod
         reloadTimerParameters()
+        return this
+    }
+
+    fun withVerticalAccounting(value: Boolean): CamerasProcessor {
+        ObjectPosition.verticalAccounting = value
         return this
     }
 
@@ -197,11 +203,11 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
 
     override fun loadCenters(center1: Point, center2: Point, cameraId: Int) {
         if (cameraId == firstCameraId) {
-            firstCameraFirstCenter = center1
-            firstCameraSecondCenter = center2
+            firstCameraDownPoint = center1
+            firstCameraUpperPoint = center2
         } else if (cameraId == secondCameraId) {
-            secondCameraFirstCenter = center1
-            secondCameraSecondCenter = center2
+            secondCameraDownPoint = center1
+            secondCameraUpperPoint = center2
         }
         processCenters()
         distanceMeasurement()
@@ -215,10 +221,10 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
                 objectPosition = ObjectPosition(this)
                     .withDistanceBetweenCameras(distanceBetweenCameras)
                     .withFocus(focus)
-                    .withFirstCameraDownPoint(firstCameraFirstCenter)
-                    .withFirstCameraUpperPoint(firstCameraSecondCenter)
-                    .withSecondCameraDownPoint(secondCameraFirstCenter)
-                    .withSecondCameraUpperPoint(secondCameraSecondCenter)
+                    .withFirstCameraDownPoint(firstCameraDownPoint)
+                    .withFirstCameraUpperPoint(firstCameraUpperPoint)
+                    .withSecondCameraDownPoint(secondCameraDownPoint)
+                    .withSecondCameraUpperPoint(secondCameraUpperPoint)
                     .withMethod(method)
                     .withRatio(ratio)
                     .withCenterOfVideos(getCenter())
@@ -227,10 +233,10 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
             } else {
                 objectPosition!!.withDistanceBetweenCameras(distanceBetweenCameras)
                     .withFocus(focus)
-                    .withFirstCameraDownPoint(firstCameraFirstCenter)
-                    .withFirstCameraUpperPoint(firstCameraSecondCenter)
-                    .withSecondCameraDownPoint(secondCameraFirstCenter)
-                    .withSecondCameraUpperPoint(secondCameraSecondCenter)
+                    .withFirstCameraDownPoint(firstCameraDownPoint)
+                    .withFirstCameraUpperPoint(firstCameraUpperPoint)
+                    .withSecondCameraDownPoint(secondCameraDownPoint)
+                    .withSecondCameraUpperPoint(secondCameraUpperPoint)
                     .withMethod(method)
                     .withRatio(ratio)
                     .withCenterOfVideos(getCenter())
@@ -246,17 +252,17 @@ class CamerasProcessor(private val initializer: ObjectPositionLibraryInterface) 
         Point((widthOfVideo / 2), (heightOfVideo / 2))
 
     override fun processCenters() {
-        if (firstCameraFirstCenter.y > firstCameraSecondCenter.y
+        if (firstCameraDownPoint.y < firstCameraUpperPoint.y
         ) {
-            val tmp = firstCameraFirstCenter
-            firstCameraFirstCenter = firstCameraSecondCenter
-            firstCameraSecondCenter = tmp
+            val tmp = firstCameraDownPoint
+            firstCameraDownPoint = firstCameraUpperPoint
+            firstCameraUpperPoint = tmp
         }
-        if (secondCameraFirstCenter.y > secondCameraSecondCenter.y
+        if (secondCameraDownPoint.y < secondCameraUpperPoint.y
         ) {
-            val tmp = secondCameraFirstCenter
-            secondCameraFirstCenter = secondCameraSecondCenter
-            secondCameraSecondCenter = tmp
+            val tmp = secondCameraDownPoint
+            secondCameraDownPoint = secondCameraUpperPoint
+            secondCameraUpperPoint = tmp
         }
     }
 

@@ -68,6 +68,10 @@ data class Settings(
 
     @Basic
     @Column(name = "measurement_number", nullable = false)
-    val measurementNumber: Int = 10
+    val measurementNumber: Int = 10,
+
+    @Basic
+    @Column(name = "vertical_accounting", nullable = false, columnDefinition = "bool default false")
+    val verticalAccounting: Boolean = false
 
 )

@@ -11,5 +11,6 @@ data class SettingsParams(
     val distanceBetweenCameras: Double,
     val ratio: Double,
     val qualityOfVideo: QualityOfVideo,
-    val measurementNumber: Int
+    val measurementNumber: Int,
+    val verticalAccounting: Boolean
 )
